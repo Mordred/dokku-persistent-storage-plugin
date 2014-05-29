@@ -9,7 +9,7 @@ Inspired by [dokku-persistent-storage](https://github.com/dyson/dokku-persistent
 ## Installation
 
 ```bash
-git clone https://github.com/mordred/dokku-persistent-storage-plugin.git /var/lib/dokku/plugins/persistent-storage-plugin
+git clone https://github.com/Mordred/dokku-persistent-storage-plugin.git /var/lib/dokku/plugins/persistent-storage-plugin
 ```
 
 ## Commands
