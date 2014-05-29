@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+# Check if name is specified
+if [[ $1 == persistent-storage ]] || [[ $1 == persistent-storage:* ]]; then
+  if [[ -z $2 ]]; then
+    echo "You must specify an app name"
+    exit 1
+  else
+    APP="$2"
+    PERSISTENT_STORAGE_FILE="$DOKKU_ROOT/$APP/PERSISTENT_STORAGE"
+
+    # Check if app exists with the same name
+    if [ ! -d "$DOKKU_ROOT/$APP" ]; then
+      echo "App $APP does not exist"
+      exit 1
+    fi
+
+    [ -f $PERSISTENT_STORAGE_FILE ] || {
+      echo "-----> Creating $PERSISTENT_STORAGE_FILE"
+      touch $PERSISTENT_STORAGE_FILE
+    }
+  fi
+fi
+
+case "$1" in
+
+  persistent-storage)
+      cat $PERSISTENT_STORAGE_FILE
+    ;;
+
+  persistent-storage:add)
+    if [[ -z "${*:3}" ]]; then
+      echo "Usage: dokku persistent-storage:add <app> DIR_NAME [DIR_NAME2 ...]"
+      echo "Must specify a DIRECTORY to persist."
+      exit 1
+    fi
+
+    directories="${*:3}"
+    for directory in $directories; do
+      # Check if the directory is already in config
+      if egrep -q "^$directory\$" $PERSISTENT_STORAGE_FILE; then
+        echo "The \"$directory\" is already configured as persistent storage"
+      else
+        echo $directory >>$PERSISTENT_STORAGE_FILE
+        echo "Added \"$directory\" persistent storage to the application $APP"
+      fi
+    done
+    ;;
+
+  persistent-storage:remove)
+    if [[ -z "${*:3}" ]]; then
+      echo "Usage: dokku persistent-storage:remove <app> DIR_NAME [DIR_NAME2 ...]"
+      echo "Must specify a DIRECTORY to remove from persistent storage."
+      exit 1
+    fi
+
+    directories="${*:3}"
+    for directory in $directories; do
+      if egrep -q "^$directory\$" $PERSISTENT_STORAGE_FILE; then
+        sed -i "\#^$directory\$#d" $PERSISTENT_STORAGE_FILE
+        echo "Removed \"$directory\" persistent storage from the application $APP"
+      else
+        echo "The \"$directory\" is not configured as persistent storage"
+      fi
+    done
+    ;;
+
+  persistent-storage:clear)
+    echo -n "" >$PERSISTENT_STORAGE_FILE
+    echo "Removed all persistent storages"
+    ;;
+
+  help)
+    cat && cat<<EOF
+    persistent-storage <app>                                          display current persistent directories within app
+    persistent-storage:add <app> DIR_NAME [DIR_NAME2 ...]             add new directory which will persist across multiple deploys
+    persistent-storage:remove <app> DIR_NAME [DIR_NAME2 ...]          remove previous added directories
+    persistent-storage:clear <app>                                    remove all settings
+EOF
+    ;;
+esac

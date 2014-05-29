@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+STDIN=$(cat)
+APP="$1"
+PERSISTENT_FILE="PERSISTENT_STORAGE"
+PERSISTENT_FILE_PATH="$DOKKU_ROOT/$APP/$PERSISTENT_FILE"
+
+HOST_DIR="$DOKKU_ROOT/$APP/.storages"
+APP_DIR="/app"
+
+output=""
+if [[ -f "$PERSISTENT_FILE_PATH" ]]; then
+  for directory in `cat $PERSISTENT_FILE_PATH`; do
+    # trim /
+    directory=${directory%/}
+    directory=${directory#/}
+    if [ ! -d $HOST_DIR/$directory ]; then
+      mkdir -p $HOST_DIR/$directory
+    fi
+    output="$output -v $HOST_DIR/$directory:$APP_DIR/$directory"
+  done
+fi
+
+echo "$STDIN$output"
